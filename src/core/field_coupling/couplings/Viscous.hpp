@@ -20,23 +20,54 @@
 #define CORE_CONSTRAINTS_DETAIL_VISCOUS_HPP
 
 #include <utils/Vector.hpp>
+#include <unordered_map>
 
 namespace FieldCoupling {
 namespace Coupling {
 class Viscous {
-  double m_gamma;
+  std::unordered_map<int, double> m_scales;
+  double m_default;
 
 public:
   static constexpr bool is_linear = true;
 
-  Viscous(double gamma) : m_gamma(gamma) {}
-  double &gamma() { return m_gamma; }
-  double const &gamma() const { return m_gamma; }
+  /* Keep a simple constructor for backward compatibility */
+  Viscous(double gamma) : m_scales(), m_default(gamma) {}
 
+  /* Allow initialization with per-particle scales + default */
+  template <typename ScalesRef>
+  Viscous(ScalesRef &&scales, double default_val)
+      : m_scales(std::forward<ScalesRef>(scales)), m_default(default_val) {}
+
+  /* Backwards-compatible accessor */
+  double &gamma() { return m_default; }
+  double const &gamma() const { return m_default; }
+
+  std::unordered_map<int, double> &particle_scales() { return m_scales; }
+  std::unordered_map<int, double> const &particle_scales() const {
+    return m_scales;
+  }
+
+private:
+  template <typename Particle> double scale(Particle const &p) const {
+    // Lookup by particle type only. The friction/gamma is defined per type
+    // in this project, so we use the particle type as the key into
+    // `m_scales`. If no entry for the type exists, fall back to the
+    // default gamma value.
+    auto it_type = m_scales.find(p.type());
+    if (it_type != m_scales.end()) {
+      return it_type->second;
+    }
+
+    return m_default;
+  }
+
+public:
   template <typename Particle>
   Utils::Vector3d operator()(Particle const &p,
                              Utils::Vector3d const &field) const {
-    return m_gamma * (field - p.v());
+    const double s = scale(p);
+    return s * (field - p.v());
   }
 };
 } // namespace Coupling

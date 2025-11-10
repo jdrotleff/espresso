@@ -536,6 +536,22 @@ class FlowField(_Interpolated):
     """
 
     def __init__(self, **kwargs):
+        # Allow passing a global coupling constant as `gamma` and
+        # per-particle coupling constants as `particle_gammas` for
+        # convenience. These are forwarded to the underlying
+        # implementation which expects `default_scale` and
+        # `particle_scales` (same naming as other tabulated fields
+        # like ForceField).
+        if "sip" not in kwargs:
+            # map the common user-facing name `gamma` to the
+            # `default_scale` expected by the backend
+            if "gamma" in kwargs:
+                kwargs["default_scale"] = kwargs.pop("gamma")
+            # accept either `particle_gammas` or the already used
+            # `particle_scales` name; map `particle_gammas` to
+            # `particle_scales` so the backend receives the expected key
+            if "particle_gammas" in kwargs:
+                kwargs["particle_scales"] = kwargs.pop("particle_gammas")
         super().__init__(**kwargs)
 
     _codim = 3

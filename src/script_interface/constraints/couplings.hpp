@@ -59,10 +59,15 @@ template <> struct coupling_parameters_impl<Viscous> {
   template <typename This>
   static std::vector<AutoParameter> params(const This &this_) {
     return {{
-        "gamma",
-        AutoParameter::read_only,
-        [this_]() { return this_().gamma(); },
-    }};
+                "gamma",
+                AutoParameter::read_only,
+                [this_]() { return this_().gamma(); },
+            },
+            {"default_scale", AutoParameter::read_only,
+             [this_]() { return this_().gamma(); }},
+            {"particle_scales", AutoParameter::read_only, [this_]() {
+               return make_unordered_map_of_variants(this_().particle_scales());
+             }}};
   }
 };
 
@@ -87,6 +92,16 @@ static std::vector<AutoParameter> coupling_parameters(const This &this_) {
 
 template <typename T> T make_coupling(const VariantMap &) { return T{}; }
 template <> inline Viscous make_coupling<Viscous>(const VariantMap &params) {
+  // Accept either the legacy `gamma` parameter or the newer
+  // `default_scale` + `particle_scales` pair.
+  if (params.find("default_scale") != params.end() ||
+      params.find("particle_scales") != params.end()) {
+    return Viscous{get_value_or<std::unordered_map<int, double>>(params,
+                                                                 "particle_scales",
+                                                                 {}),
+                   get_value<double>(params, "default_scale")};
+  }
+
   return Viscous{get_value<double>(params, "gamma")};
 }
 

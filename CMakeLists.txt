@@ -245,6 +245,7 @@ if(ESPRESSO_BUILD_WITH_CUDA)
 endif()
 
 # Python interpreter and Cython interface library
+set(Python3_EXECUTABLE home/jdrotleff/miniconda3/envs/swarmrl/bin/python)
 if(ESPRESSO_BUILD_WITH_PYTHON)
   find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
   find_package(Cython 0.29.21...<3.0.8 REQUIRED)
